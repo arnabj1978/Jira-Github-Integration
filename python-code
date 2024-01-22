@@ -1,0 +1,42 @@
+import requests
+
+# Replace these variables with your actual values
+JIRA_HOST = "your-jira-instance.com"
+JIRA_USERNAME = "your-jira-username"
+JIRA_PASSWORD = "your-jira-password"
+GITHUB_REPO_OWNER = "your-github-owner"
+GITHUB_REPO_NAME = "your-github-repo"
+
+# List of Jira issue keys
+issue_keys = ["ABC-123", "ABC-124", "ABC-125"]  # Add your issue keys here
+
+# Iterate over issue keys
+for issue_key in issue_keys:
+    # Step 1: Get Issue Details from Jira
+    jira_url = f"https://{JIRA_HOST}/rest/api/2/issue/{issue_key}"
+    response = requests.get(jira_url, auth=(JIRA_USERNAME, JIRA_PASSWORD), headers={"Content-Type": "application/json"})
+    
+    if response.status_code == 200:
+        jira_data = response.json()
+        
+        # Extract GitHub information from jira_data
+        # Modify this part based on the actual structure of your Jira response
+        
+        # Example: Extract GitHub commit SHA from a custom field named 'github_commit_sha'
+        github_commit_sha = jira_data['fields']['customfield_12345']  # Replace 'customfield_12345' with your actual field ID
+        
+        # Step 2: Get Commit Details from GitHub
+        github_url = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/commits/{github_commit_sha}"
+        github_response = requests.get(github_url, headers={"Content-Type": "application/json"})
+        
+        if github_response.status_code == 200:
+            github_data = github_response.json()
+            
+            # Extract and print relevant commit details
+            commit_message = github_data['commit']['message']
+            print(f"Issue Key: {issue_key}, Commit SHA: {github_commit_sha}, Commit Message: {commit_message}")
+        else:
+            print(f"Failed to fetch GitHub details for Issue Key: {issue_key}")
+    else:
+        print(f"Failed to fetch Jira details for Issue Key: {issue_key}")
+
