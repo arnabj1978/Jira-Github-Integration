@@ -1,0 +1,46 @@
+# Replace these variables with your actual values
+$JIRA_HOST = "your-jira-instance.com"
+$JIRA_USERNAME = "your-jira-username"
+$JIRA_PASSWORD = "your-jira-password"
+$GITHUB_REPO_OWNER = "your-github-owner"
+$GITHUB_REPO_NAME = "your-github-repo"
+
+# List of Jira issue keys
+$issueKeys = @("ABC-123", "ABC-124", "ABC-125")  # Add your issue keys here
+
+# Function to fetch commit details for a given issue key
+function Fetch-CommitDetails($issueKey) {
+    try {
+        # Step 1: Get Issue Details from Jira
+        $jiraUrl = "https://$JIRA_HOST/rest/api/2/issue/$issueKey"
+        $jiraResponse = Invoke-RestMethod -Uri $jiraUrl -Method Get -Credential (Get-Credential -UserName $JIRA_USERNAME -Password $JIRA_PASSWORD) -Headers @{"Content-Type"="application/json"}
+
+        if ($jiraResponse) {
+            # Extract GitHub information from jiraResponse
+            # Modify this part based on the actual structure of your Jira response
+
+            # Example: Extract GitHub commit SHA from a custom field named 'github_commit_sha'
+            $githubCommitSha = $jiraResponse.fields.customfield_12345  # Replace 'customfield_12345' with your actual field ID
+
+            # Step 2: Get Commit Details from GitHub
+            $githubUrl = "https://api.github.com/repos/$GITHUB_REPO_OWNER/$GITHUB_REPO_NAME/commits/$githubCommitSha"
+            $githubResponse = Invoke-RestMethod -Uri $githubUrl -Method Get -Headers @{"Content-Type"="application/json"}
+
+            if ($githubResponse) {
+                # Extract and write relevant commit details
+                $commitMessage = $githubResponse.commit.message
+                Write-Host "Issue Key: $issueKey, Commit SHA: $githubCommitSha, Commit Message: $commitMessage"
+            } else {
+                Write-Error "Failed to fetch GitHub details for Issue Key: $issueKey"
+            }
+        } else {
+            Write-Error "Failed to fetch Jira details for Issue Key: $issueKey"
+        }
+    } catch {
+        Write-Error "Error: $_.Exception.Message"
+    }
+}
+
+
+# Iterate over issue keys
+$issueKeys | ForEach-Object { Fetch-CommitDetails $_ }
