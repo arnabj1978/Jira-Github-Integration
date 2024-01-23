@@ -1,0 +1,53 @@
+# Replace these variables with your actual values
+$GitHubRepository = "your/repository"
+$AccessToken = "your-access-token"
+$SourceBranch = "source-feature-branch"
+$DestinationBranch = "destination-feature-branch"
+$CommitsToCherryPick = @("abc123", "def456", "ghi789")  # List of commit SHAs to cherry-pick
+
+# Set GitHub API base URL
+$GitHubApiBaseUrl = "https://api.github.com/repos/$GitHubRepository"
+
+# Function to check if a commit is part of a pull request
+function IsPullRequestCommit($commitSha) {
+    $pullRequests = Invoke-RestMethod -Uri "$GitHubApiBaseUrl/pulls" -Method Get -Headers @{ Authorization = "token $AccessToken" }
+
+    foreach ($pullRequest in $pullRequests) {
+        $commitsUrl = $pullRequest.commits_url
+        $commits = Invoke-RestMethod -Uri $commitsUrl -Method Get -Headers @{ Authorization = "token $AccessToken" }
+
+        foreach ($commit in $commits) {
+            if ($commit.sha -eq $commitSha) {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
+# Function to perform cherry-pick for a commit SHA
+function CherryPickCommit($commitSha) {
+    # Check if the commit is part of a pull request
+    if (-not (IsPullRequestCommit $commitSha)) {
+        # Cherry-pick the commit
+        git checkout $DestinationBranch
+        git cherry-pick $commitSha
+
+        # Optionally, resolve conflicts if needed
+        # git mergetool  # Uncomment this line if conflicts need resolution
+
+        # Optionally, commit the cherry-picked changes
+        # git commit -m "Cherry-picked commit $commitSha"
+    } else {
+        Write-Host "Skipping pull request commit: $commitSha"
+    }
+}
+
+# Iterate through the list of commits to cherry-pick
+foreach ($commitSha in $CommitsToCherryPick) {
+    CherryPickCommit $commitSha
+}
+
+Write-Host "Cherry-pick completed for commits: $($CommitsToCherryPick -join ', ')"
+
