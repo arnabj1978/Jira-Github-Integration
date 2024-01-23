@@ -1,0 +1,36 @@
+# Replace these variables with your actual values
+$GitHubRepository = "your/repository"
+$AccessToken = "your-access-token"
+$SourceBranch = "source-feature-branch"
+$DestinationBranch = "destination-feature-branch"
+$CommitsToCherryPick = @("abc123", "def456", "ghi789")  # List of commit SHAs to cherry-pick
+
+# Set GitHub API base URL
+$GitHubApiBaseUrl = "https://api.github.com/repos/$GitHubRepository"
+
+# Function to perform cherry-pick merge for a commit SHA
+function CherryPickCommit($commitSha) {
+    # Create a pull request with the cherry-picked commit
+    $pullRequestBody = @{
+        title = "Cherry-pick $commitSha";
+        head = $SourceBranch;
+        base = $DestinationBranch;
+        body = "Cherry-picking commit $commitSha to $DestinationBranch";
+    } | ConvertTo-Json
+
+    $pullRequestResponse = Invoke-RestMethod -Uri "$GitHubApiBaseUrl/pulls" -Method Post -Headers @{ Authorization = "token $AccessToken" } -Body $pullRequestBody -ContentType "application/json"
+
+    # Merge the pull request
+    $mergeRequestBody = @{
+        commit_title = "Merge commit $commitSha";
+    } | ConvertTo-Json
+
+    Invoke-RestMethod -Uri "$GitHubApiBaseUrl/pulls/$($pullRequestResponse.number)/merge" -Method Put -Headers @{ Authorization = "token $AccessToken" } -Body $mergeRequestBody -ContentType "application/json"
+}
+
+# Iterate through the list of commits to cherry-pick
+foreach ($commitSha in $CommitsToCherryPick) {
+    CherryPickCommit $commitSha
+}
+
+Write-Host "Cherry-pick merge completed for commits: $($CommitsToCherryPick -join ', ')"
